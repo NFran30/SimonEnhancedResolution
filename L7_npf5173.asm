@@ -26,15 +26,19 @@ BoxTable:
 	.word 20, 20, 4    #Box 4, Bottom Right, Red
 	.word 16, 0, 5     #Coordinate for Vertical divider 
 	
+HorizDividerLines:
+	.word 0, 0, 5, 256, 0	 #First horizontal line, right to left (x, y, ColorTable#, length, 0 = Pos Direction)
+	.word 256, 0, 5, 256, 1 #First horizontal line, left to right (x, y, ColorTable#, -length, 1 = Neg Direction) 
+	
 	
 BlinkTimes:
 	.word 750	   #Millisecond Time for Simon box blinking
 	.word 400
 	.word 100
 	
-HorizDividerLines:
-	.word 67, 67, 192	#First horizontal line, right to left (x, y, length)
-	.word 189, 67, 192 	#First horizontal line, left to right (x, y, -length) 
+#HorizDividerLines:
+#	.word 67, 67, 192	#First horizontal line, right to left (x, y, length)
+#	.word 189, 67, 192 	#First horizontal line, left to right (x, y, -length) 
 	
 
 .text
@@ -337,29 +341,31 @@ jr $ra
 ###################################################
 DrawQuadrants:
 
-addiu $sp, $sp, -4     #Allocate space on stack to save ra
-sw $ra, 0($sp)	       #Store ra 
+addiu $sp, $sp, -4     		#Allocate space on stack to save ra
+sw $ra, 0($sp)	       		#Store ra 
 
-la $t0, BoxTable	#Load address of array on stack	
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2, 8($t0)          #Load word for white pixel color
-add $a3, $0, 32		#Length of line
+la $t0, HorizDividerLines	#Load address of array on stack	
+lw $a0, 0($t0)			#Load word for x variable of horiz divider
+lw $a1, 4($t0)          	#Load word for y variable of horiz divider
+lw $a2, 8($t0)          	#Load word for white pixel color
+lw $a3, 12($t0)			#Length of line
+lw $t1, 16($t0)  		#Direction of the line
 
-jal DrawHorizLine 
+jal DrawDiagLine 		#Draw horizontal line left to right
 
-lw $ra, 0($sp)	       #Restore ra 
+lw $ra, 0($sp)	       		#Restore ra 
 
-la $t0 BoxTable
-lw $a0, 60($t0)		#Load word for x variable of horiz divider
-lw $a1, 64($t0)         #Load word for y variable of horiz divider
-lw $a2, 68($t0)         #Load word for white pixel color
-add $a3, $0, 32		#Length of line
+la $t0 HorizDividerLines	#Load address of array on stack	
+lw $a0, 20($t0)			#Load word for x variable of horiz divider
+lw $a1, 24($t0)         	#Load word for y variable of horiz divider
+lw $a2, 28($t0)         	#Load word for white pixel color
+lw $a3, 32($t0) 		#Length of line
+lw $t1, 36($t0)  		#Direction of the line
 
-jal DrawVertLine
+jal DrawDiagLine		#Draw horizontal line right to left
 
-lw $ra, 0($sp)	       #Store ra 
-addiu $sp, $sp, 4      #Move back up stack
+lw $ra, 0($sp)	       		#Store ra 
+addiu $sp, $sp, 4      		#Move back up stack
 
 jr $ra
 
@@ -399,40 +405,43 @@ lw $s2, 0($sp)		#Restore a4
 addiu $sp, $sp, 24      #Restore position of stack pointer
 jr $ra
 
-######Function to Draw a Horizontal Line#########
+######Function to Draw a Diagnal Line####################
 ## $a0 for x 0-31
 ## $a1 for y 0-31
 ## $a2 for color number 0-7
-## $a3 length of the horizontal line
-#####################################
-DrawHorizLine:
-addi $sp, $sp, -12	#store all changable variables to stack
-sw $ra, 8($sp)		#Store return address on stack
-sw $a1, 4($sp)		#Store a registers that could change
-sw $a2, 0($sp)		
+## $a3 length of the Diagnal line
+## $t1 draw direction on x axis, 0 pos, 1 neg direction
+#########################################################
+DrawDiagLine:
+addi $sp, $sp, -16		#store all changable variables to stack
+sw $ra, 12($sp)			#Store return address on stack
+sw $a1, 8($sp)			#Store a registers that could change
+sw $a2, 4($sp)
+sw $t1, 0($sp)			#Save the signal for which direction to move on x axis
 
-add $t0, $0, 32 	#Max Width of Bitmap
-sub $t0, $t0, $a0	#Current distance to wall
-
-ble $a3, $t0, HorizLoop	
-la $a0 Error_Width
-li $v0, 4
-syscall
-j exit
+add $t0, $0, 32 		#Max Width of Bitmap
+sub $t0, $t0, $a0		#Current distance to wall
 		
-HorizLoop:
-jal DrawDot
-add $a3, $a3, -1
-add $a0, $a0, 1
-bne $a3, $0, HorizLoop
+DiagnalLoop:
+jal DrawDot			#Mark the dot on bitmap
+lw $t1, 0($sp)			#Restore the signal for direction to move on x axis
+add $a3, $a3, -1		#Decrement remaining line length
+beqz $t1, movePosDir		#Traverse from left to right
+beq $t1, 1, moveNegDir		#Traverse from right to left
+movePosDir:add $a0, $a0, 1	#Incrments x in when moving in positive direction
+j proceed 
+moveNegDir: sub $a0, $a0, 1	#Incrments x in when moving in negative direction
+proceed:add $a1, $a1, 1		#Increment y
+bne $a3, $0, DiagnalLoop	#Continue while line lenth hasn't been achieved
 
-add $ra, $ra, 4
+add $ra, $ra, 4			#Move back up stack
 
-lw $a1, 4($sp)		#restore register, DrawDot could change them
-lw $a2, 0($sp)
+lw $a1, 8($sp)			#restore register, DrawDot could change them
+lw $a2, 4($sp)
 
-lw $ra, 8($sp)		#restore return address
-addi $sp, $sp, 12	#move stack pointer back up
+
+lw $ra, 12($sp)			#restore return address
+addi $sp, $sp, 16		#move stack pointer back up
 
 jr $ra
 
@@ -482,7 +491,7 @@ addiu $sp, $sp, -8      #Open up two words on stack
 sw $ra, 4($sp)		#Store ra
 sw $a2, 0($sp)		#Store original a2
 
-jal CalcAddress  #$v0 Las address for pixel
+jal CalcAddress  	#$v0 Las address for pixel
 lw $a2, 0($sp)		#Restore a2
 sw $v0, 0($sp)		#Store v0
 
@@ -513,15 +522,15 @@ addiu $sp, $sp, 4     #Clear ra data off the stack
 
 jr $ra
 
-######Function to Retrieve Bitmap Display Address ###########
+######Function to Retrieve Bitmap Display Address (256 x 256) ###########
 ## $a0 for x 0-31
 ## $a1 for y 0-31
 ## $v0 address for color a pixel
 #############################################################
 CalcAddress:
-add $t0, $0, 0x10040000	#Starting address on Bitmap Display 0,0
+add $t0, $0, 0x10040000	#Starting address on Bitmap Display 0,0 on the heap
 
-mul $t1, $a1, 32		#Set offset for y
+mul $t1, $a1, 256		#Set offset for y
 mul $t1, $t1, 4
 
 mul $t2, $a0, 4			#Adjusts the position for x
