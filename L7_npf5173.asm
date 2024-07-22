@@ -8,7 +8,11 @@ Winner:            .asciiz "Congrats, you won!\n"
 Loser:             .asciiz "Mismatch! You lost...\n"
 SkillInit:         .asciiz "Welcome to Simon, please enter 1 for beginner, 2 for Intermediate, or 3 for expert level..."
 
-.data
+Text1:  .asciiz "1"
+Text2:  .asciiz "2"
+Text3:  .asciiz "3"
+Text4:  .asciiz "4"
+
 
 ColorTable: 
 	.word 0x000000     #black
@@ -17,30 +21,87 @@ ColorTable:
 	.word 0x00ff00     #green
 	.word 0xff0000     #red
 	.word 0xffffff	   #white
+	.word 0x1e90ff	   #Dodger Blue
+	.word 0xffa500	   #orange
+	.word 0xdc143c	   #crimson
+	.word 0x3cb371     #medium Sea Green
 	
-BoxTable:
-	.word 0, 16, 5	   #Coordinate for Horizontal divider
-	.word 4, 4, 1      #Box 1, Upper Left, Yellow 
-	.word 20, 4, 2    #Box 2, Upper Right, Blue, 
-	.word 4, 20, 3     #Box 3, Bottom Left, Green,
-	.word 20, 20, 4    #Box 4, Bottom Right, Red
-	.word 16, 0, 5     #Coordinate for Vertical divider 
+DigitTable:
+        .byte   ' ', 0,0,0,0,0,0,0,0,0,0,0,0
+        .byte   '0', 0x7e,0xff,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xff,0x7e
+        .byte   '1', 0x38,0x78,0xf8,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18
+        .byte   '2', 0x7e,0xff,0x83,0x06,0x0c,0x18,0x30,0x60,0xc0,0xc1,0xff,0x7e
+        .byte   '3', 0x7e,0xff,0x83,0x03,0x03,0x1e,0x1e,0x03,0x03,0x83,0xff,0x7e
+        .byte   '4', 0xc3,0xc3,0xc3,0xc3,0xc3,0xff,0x7f,0x03,0x03,0x03,0x03,0x03
+        .byte   '5', 0xff,0xff,0xc0,0xc0,0xc0,0xfe,0x7f,0x03,0x03,0x83,0xff,0x7f
+        .byte   '6', 0xc0,0xc0,0xc0,0xc0,0xc0,0xfe,0xfe,0xc3,0xc3,0xc3,0xff,0x7e
+        .byte   '7', 0x7e,0xff,0x03,0x06,0x06,0x0c,0x0c,0x18,0x18,0x30,0x30,0x60
+        .byte   '8', 0x7e,0xff,0xc3,0xc3,0xc3,0x7e,0x7e,0xc3,0xc3,0xc3,0xff,0x7e
+        .byte   '9', 0x7e,0xff,0xc3,0xc3,0xc3,0x7f,0x7f,0x03,0x03,0x03,0x03,0x03
+        .byte   '+', 0x00,0x00,0x00,0x18,0x18,0x7e,0x7e,0x18,0x18,0x00,0x00,0x00
+        .byte   '-', 0x00,0x00,0x00,0x00,0x00,0x7e,0x7e,0x00,0x00,0x00,0x00,0x00
+        .byte   '*', 0x00,0x00,0x00,0x66,0x3c,0x18,0x18,0x3c,0x66,0x00,0x00,0x00
+        .byte   '/', 0x00,0x00,0x18,0x18,0x00,0x7e,0x7e,0x00,0x18,0x18,0x00,0x00
+        .byte   '=', 0x00,0x00,0x00,0x00,0x7e,0x00,0x7e,0x00,0x00,0x00,0x00,0x00
+        .byte   'A', 0x18,0x3c,0x66,0xc3,0xc3,0xc3,0xff,0xff,0xc3,0xc3,0xc3,0xc3
+        .byte   'B', 0xfc,0xfe,0xc3,0xc3,0xc3,0xfe,0xfe,0xc3,0xc3,0xc3,0xfe,0xfc
+        .byte   'C', 0x7e,0xff,0xc1,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc1,0xff,0x7e
+        .byte   'D', 0xfc,0xfe,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xfe,0xfc
+        .byte   'E', 0xff,0xff,0xc0,0xc0,0xc0,0xfe,0xfe,0xc0,0xc0,0xc0,0xff,0xff
+        .byte   'F', 0xff,0xff,0xc0,0xc0,0xc0,0xfe,0xfe,0xc0,0xc0,0xc0,0xc0,0xc0
+        # add additional characters here....
+	# first byte is the ascii character
+	# next 12 bytes are the pixels that are "on" for each of the 12 lines
+        .byte    0, 0,0,0,0,0,0,0,0,0,0,0,0
+
+CircleTable:
+	.word 128, 80, 7, 124, 76    #Circle 1, Upper, Orange, Number X, Number Y
+	.word 80, 128, 6, 76, 124   #Circle 2, Left, Dodger Blue
+	.word 176, 128, 8, 172, 124  #Circle 3, Right, Crimson
+	.word 128, 176, 9, 124, 172  #Cicle 4, Bottom, Medium Sea Green
+	
+CircleRecipe:
+	.word -3, -15, 7   #offset x, offset y, horiz line length
+	.word -3, 13	   #offset x, horiz line length
+	.word -2, 17	   #Last comment above continues through array
+	.word -1, 19
+	.word -1, 21
+	.word -1, 23
+	.word -1, 25
+	.word -1, 27
+	.word 0, 27
+	.word -1, 29
+	.word 0, 29
+	.word 0, 29
+	.word -1, 31
+	.word 0, 31
+	.word 0, 31
+	.word 0, 31
+	.word 0, 31
+	.word 0, 31
+	.word 0, 31
+	.word 1, 29
+	.word 0, 29
+	.word 0, 29
+	.word 1, 27
+	.word 0, 27
+	.word 1, 25
+	.word 1, 23
+	.word 1, 21
+	.word 1, 19
+	.word 2, 17
+	.word 3, 13
+	.word 3, 7
 	
 HorizDividerLines:
-	.word 0, 0, 5, 256, 0	 #First horizontal line, right to left (x, y, ColorTable#, length, 0 = Pos Direction)
-	.word 256, 0, 5, 256, 1 #First horizontal line, left to right (x, y, ColorTable#, -length, 1 = Neg Direction) 
-	
-	
+	.word 32, 32, 5, 192, 0	 #First horizontal line, right to left (x, y, ColorTable#, length, 0 = Pos Direction)
+	.word 224, 32, 5, 192, 1 #First horizontal line, left to right (x, y, ColorTable#, -length, 1 = Neg Direction) 
+ 
 BlinkTimes:
 	.word 750	   #Millisecond Time for Simon box blinking
 	.word 400
 	.word 100
 	
-#HorizDividerLines:
-#	.word 67, 67, 192	#First horizontal line, right to left (x, y, length)
-#	.word 189, 67, 192 	#First horizontal line, left to right (x, y, -length) 
-	
-
 .text
 la $sp, Stack_End	#point $sp to memory stack
 
@@ -196,57 +257,6 @@ la $sp, 0($t0)		 #Restore stack pointer to address on Stack_End
 
 jr $ra
 
-############ Function to Blink Simon Box ###################
-### $a0 Simon Box Reqest
-### $a1 $a2 Blink time "Milliseconds"
-##########################################################
-BlinkSimonBox:
-addiu $sp, $sp, -16     #Allocate space on stack to save ra
-sw $ra, 12($sp)	        #Store ra
-sw $a0, 8($sp)	        #Store Box Number requested
-sw $a1, 4($sp)		#Store Blink time
-
-la $t0, BoxTable	#Load address of array on stack	
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2, 8($t0)          #Load word for pixel color
-add $a3, $0, 32		#Length of line
-
-lw $t1, 8($sp)		#Request Simon box number, original a0
-mul $t1, $t1, 12	#Requested box number address offset
-la $t0, BoxTable	#Load address of array of boxes
-add $t0, $t0, $t1	#Address of Requested Box
-sw $t0, 0($sp)		#Store Address of BoxTable + Offset
-
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2, 8($t0)          #Load word for requested box color
-add $a3, $0, 8		#Length of line
-
-jal DrawBox
-lw $ra, 12($sp)	       #Restore ra
-
-lw $a0, 4($sp)	       #Load arguement for pause time before "Blink time"
-
-jal Pause
-lw $ra, 12($sp)	       #Restore ra
-
-lw $t0, 0($sp)		#Rstore Address of BoxTable + Offset
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2 ColorTable           #Load word for BLACK box color, erases the box
-add $a3, $0, 8		#Length of line
-
-jal DrawBox
-
-lw $ra, 12($sp)	       #Restore ra
-lw $a0, 8($sp)	       #Restore Box Number requested
-lw $a1, 4($sp)	       #Restore Blink time
-
-addiu $sp, $sp, 16       #Move back up stack to
-
-jr $ra
-
 ########## Blink Lights #############
 #####################################
 BlinkLights:
@@ -276,7 +286,7 @@ add $t3, $t3, 4		#Correct address offset
 bLoop:
 add $t1, $t1, 4		#Clear loop counter
 addi $t3, $t3, -4	#Increment to next value on Simon stack
-lw $a0, 0($t3)		#Load next box value for BlinkSimonBox
+lw $a0, 0($t3)		#Load next box value for BlinkSimonCircle
 
 sw $t2, 16($sp)		#Store temps, bound to change in nested functions
 sw $t1, 8($sp)
@@ -290,7 +300,7 @@ lw $a1, 4($t4)		#Blink Speed Intermediate
 beq $s6, 8, blinkNext	#Blink when level 1
 lw $a1, 8($t4)		#Blink Speed Expert
 
-blinkNext:jal BlinkSimonBox
+blinkNext:jal BlinkSimonCircle
 lw $ra, 20($sp)	        #Restore ra and temp registers
 lw $t2, 16($sp)		
 lw $t1, 8($sp)
@@ -300,6 +310,215 @@ lw $t3, 0($sp)
 blt $t1, $t2, bLoop	#Check to see if total values have been traversed
 
 exitBLoop:
+jr $ra
+
+############ Function to Blink Simon Circle ###################
+### $a0 Simon Box Reqest
+### $a1 $a2 Blink time "Milliseconds"
+##########################################################
+BlinkSimonCircle:
+addiu $sp, $sp, -16     #Allocate space on stack to save ra
+sw $ra, 12($sp)	        #Store ra
+sw $a0, 8($sp)	        #Store Box Number requested
+sw $a1, 4($sp)		#Store Blink time
+
+la $t0, CircleTable	#Load address of array on stack	
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for pixel color
+#add $a3, $0, 32		#Length of line
+
+lw $t1, 8($sp)		#Request Simon box number, original a0
+mul $t1, $t1, 20	#Requested box number address offset
+la $t0, CircleTable	#Load address of array of boxes
+add $t0, $t0, $t1	#Address of Requested Box
+sw $t0, 0($sp)		#Store Address of CircleTable + Offset
+
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for requested box color
+#add $a3, $0, 8		#Length of line
+
+jal DrawCircle
+lw $ra, 12($sp)	       #Restore ra
+lw $t0, 0($sp)			#Restore circle table index address
+
+lw $a0, 12($t0)		#horizontal pixel co-ordinate number in circle
+lw $a1, 16($t0)		#vertical pixel co-ordinate
+lw $a3, 8($t0)		#pixel color number for circle
+
+lw $t2, 8($sp)		#Original Box Request Number
+
+beq $t2, 1, num1	#Switch Case for number to enter into simon circle
+beq $t2, 2, num2	
+beq $t2, 3, num3
+beq $t2, 4, num4
+
+num1: la  $a2, Text1	#Load appropriate ascii key
+j outTextCall
+num2: la  $a2, Text2
+j outTextCall
+num3: la  $a2, Text3
+j outTextCall
+num4: la  $a2, Text4
+
+outTextCall: jal OutText	#draw number in circle
+lw $ra, 12($sp)	       #Restore ra
+sw $t0, 0($sp)			#Restore circle table index address
+
+lw $a0, 8($sp)		#Original Box Request Number
+jal PlayCirSound	#Play the sound after circle has appeared with number			
+
+lw $ra, 12($sp)	       #Restore ra
+
+lw $a0, 4($sp)	       #Load arguement for pause time before "Blink time"
+jal Pause				#Call Pause
+lw $ra, 12($sp)	       #Restore ra
+
+lw $t0, 0($sp)		#Rstore Address of BoxTable + Offset
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2 ColorTable           #Load word for BLACK box color, erases the box
+#add $a3, $0, 8		#Length of line
+
+jal DrawCircle
+
+lw $ra, 12($sp)	       #Restore ra
+lw $a0, 8($sp)	       #Restore Box Number requested
+lw $a1, 4($sp)	       #Restore Blink time
+
+addiu $sp, $sp, 16       #Move back up stack to
+
+jr $ra
+
+###### Function to Draw a Circle #################
+## $a0, for x0 0-256
+## $a1, for y0 0-256
+## $a2 for color number 0-9
+## $v0 address for inital x + x0
+## $v1 color of last drawn circle
+##################################################
+DrawCircle:
+addi $sp, $sp, -28	#store all changable variables to stack
+sw $ra, 24($sp)		#Store return address on stack
+sw $a0, 20($sp)		#Store a registers that could change
+sw $a1, 16($sp)
+sw $a2, 12($sp)
+
+la, $t0 CircleRecipe	#address for recipe
+lw $t1, 0($t0)		#starting address offset, x 
+lw $t2, 4($t0)		#starting address offset, y
+
+add $a0, $a0, $t1	#first pixel on x axis
+add $a1, $a1, $t2	#first pixel on y axis
+lw $a3, 8($t0)		#load horizontal line length
+add $t3, $0, 8		
+add $t4, $t0, $t3	#next address to pull x offset from
+sw $t4, 8($sp)		#Save current address location
+sw $a0, 20($sp)		#save current x
+sw $a1, 16($sp)		#save current y
+
+sw $a0, 0($sp)		#save inital x + x0 for return, addressed need when drawing numbers in circle
+
+jal DrawHorizLine	#draw first horiz line
+
+add $t5, $0, $0		#loop counter
+cirLoop: 
+sw $t5, 4($sp)		#save current loop counter
+lw $a0, 20($sp)		#load current x
+lw $a1, 16($sp)		#load current y
+
+lw $t4, 8($sp)		#load current index in CircleRecipe address location
+lw $t5, 4($sp)		#save current loop counter
+lw $a2, 12($sp)		#load color value
+
+addi $t4, $t4, 4	#Move to next x value on CircleRecipe stack
+lw $t1, 0($t4)		#load next x offset
+add $a0, $a0, $t1	#Set next x value
+add $a1, $a1, 1		#Move down y axis
+addi $t4, $t4, 4	#Move to next line length address
+lw $a3, 0($t4)		#Set next horiz line length value
+
+sw $a0, 20($sp)		#save current x
+sw $a1, 16($sp)		#save current y
+sw $t4, 8($sp)		#load current index in CircleRecipe address location
+sw $t5, 4($sp)		#save current loop counter
+sw $a2, 12($sp)		#load color value
+
+jal DrawHorizLine	#draw first horiz line
+lw $t5, 4($sp)		#save current loop counter
+
+add $t5, $t5, 1         #increment loop counter
+blt $t5, 30, cirLoop	#Continue until circle is drawn
+
+lw $ra, 24($sp)		#restore ra
+lw $v1, 12($sp)		#return color value, addressed need when drawing numbers in circle
+lw $v0, 0($sp)		#return inital x + x0, addressed need when drawing numbers in circle
+
+addi $sp, $sp, 28	#move back up stack
+
+jr $ra
+
+######Function to Draw a Horizontal Line#########
+## $a0 for x 0-31
+## $a1 for y 0-31
+## $a2 for color number 0-7
+## $a3 length of the horizontal line
+#####################################
+DrawHorizLine:
+addi $sp, $sp, -12	#store all changable variables to stack
+sw $ra, 8($sp)		#Store return address on stack
+sw $a1, 4($sp)		#Store a registers that could change
+sw $a2, 0($sp)		
+
+add $t0, $0, 32 	#Max Width of Bitmap
+sub $t0, $t0, $a0	#Current distance to wall
+
+HorizLoop:
+jal DrawDot
+add $a3, $a3, -1
+add $a0, $a0, 1
+bne $a3, $0, HorizLoop
+
+add $ra, $ra, 4
+
+lw $a1, 4($sp)		#restore register, DrawDot could change them
+lw $a2, 0($sp)
+
+lw $ra, 8($sp)		#restore return address
+addi $sp, $sp, 12	#move stack pointer back up
+
+jr $ra
+
+############ Play Circle Sound ########################
+# a0 Circle Number 
+#####################################################
+PlayCirSound:
+li $v0, 31		#Syscall for MIDI out
+add $a1, $0, 600	#Duration "miliseconds" (0-1000)
+add $a2, $0, 5		#Insturment (Piano)
+add $a3, $0, 30		#Volume (0-127)
+
+beq $a0, 1, sound1	#Switch Case for number to enter into simon circle
+beq $a0, 2, sound2	
+beq $a0, 3, sound3
+beq $a0, 4, sound4
+
+sound1:
+add $a0, $0, 67		#Pitch (61-72) 67 is G
+j playSound
+sound2:
+add $a0, $0, 62		#Pitch (61-72) 62 is D
+j playSound
+sound3:
+add $a0, $0, 66		#Pitch (61-72) 66 is F# or Gb
+j playSound
+sound4:
+add $a0, $0, 71		#Pitch (61-72) 66 is B or Cb
+
+playSound:
+syscall
+
 jr $ra
 
 ######### Function to Lookup Color from ColorTable #############
@@ -563,3 +782,73 @@ bltu $t3, $t4, timeLoop #Check to see if time has elapsed
 syscall
 
 jr $ra
+
+################################################################
+# OutText: display ascii characters on the bit mapped display
+# $a0 = horizontal pixel co-ordinate (0-255)
+# $a1 = vertical pixel co-ordinate (0-255)
+# $a2 = pointer to asciiz text (to be displayed)
+# $a3 = pixel color number
+###############################################################
+OutText:
+        addiu   $sp, $sp, -24
+        sw      $ra, 20($sp)
+        
+        mul	$a3, $a3, 4	
+
+        li      $t8, 1          # line number in the digit array (1-12)
+_text1:
+        la      $t9, 0x10040000 	# get the memory start address
+        sll     $t0, $a0, 2     # assumes mars was configured as 256 x 256
+        addu    $t9, $t9, $t0   # and 1 pixel width, 1 pixel height
+        sll     $t0, $a1, 10    # (a0 * 4) + (a1 * 4 * 256)
+        addu    $t9, $t9, $t0   # t9 = memory address for this pixel
+
+        move    $t2, $a2        # t2 = pointer to the text string
+_text2:
+        lb      $t0, 0($t2)     # character to be displayed
+        addiu   $t2, $t2, 1     # last character is a null
+        beq     $t0, $zero, _text9
+
+        la      $t3, DigitTable # find the character in the table
+_text3:
+        lb      $t4, 0($t3)     # get an entry from the table
+        beq     $t4, $t0, _text4
+        beq     $t4, $zero, _text4
+        addiu   $t3, $t3, 13    # go to the next entry in the table
+        j       _text3
+_text4:
+        addu    $t3, $t3, $t8   # t8 is the line number
+        lb      $t4, 0($t3)     # bit map to be displayed
+
+        #sw      $zero, 0($t9)   # first pixel is black
+        addiu   $t9, $t9, 4
+
+        li      $t5, 8          # 8 bits to go out
+_text5:
+        la 	$t7, ColorTable
+        add	$t7, $t7, $a3	#adjust to current color address
+        lw      $t7, 0($t7)     # assume circle color
+        andi    $t6, $t4, 0x80  # mask out the bit (0=color, 1=white)
+        beq     $t6, $zero, _text6
+        la      $t7, ColorTable     # else it is white
+        lw      $t7, 20($t7)	 #Addres
+_text6:
+        sw      $t7, 0($t9)     # write the pixel color
+        addiu   $t9, $t9, 4     # go to the next memory position
+        sll     $t4, $t4, 1     # and line number
+        addiu   $t5, $t5, -1    # and decrement down (8,7,...0)
+        bne     $t5, $zero, _text5
+
+        #sw      $zero, 0($t9)   # last pixel is black
+        addiu   $t9, $t9, 4
+        j       _text2          # go get another character
+
+_text9:
+        addiu   $a1, $a1, 1     # advance to the next line
+        addiu   $t8, $t8, 1     # increment the digit array offset (1-12)
+        bne     $t8, 13, _text1
+
+        lw      $ra, 20($sp)
+        addiu   $sp, $sp, 24
+        jr      $ra
