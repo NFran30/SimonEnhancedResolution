@@ -119,6 +119,7 @@ add $s3, $s3, 1		   #Loop counter
 jal GetRandNum		   #Reqests next random number to
 
 add $a0, $0, $v0	   #Pass return from GetRandNumb to AddNumbToSimonStack 
+#li $a0, 4
 jal AddNumbToSimonStack    #Calls fucntion to add random number onto Simon stack
 
 jal BlinkLights		   #Blinks the simon square(s)
@@ -348,6 +349,7 @@ lw $a1, 16($t0)		#vertical pixel co-ordinate
 lw $a3, 8($t0)		#pixel color number for circle
 
 lw $t2, 8($sp)		#Original Box Request Number
+#add $t2, $t2, 1		#Origanl plus offset
 
 beq $t2, 1, num1	#Switch Case for number to enter into simon circle
 beq $t2, 2, num2	
@@ -362,9 +364,11 @@ num3: la  $a2, Text3
 j outTextCall
 num4: la  $a2, Text4
 
+sw $t0, 0($sp)			#Store circle table index address
+
 outTextCall: jal OutText	#draw number in circle
 lw $ra, 12($sp)	       #Restore ra
-sw $t0, 0($sp)			#Restore circle table index address
+lw $t0, 0($sp)			#Restore circle table index address
 
 lw $a0, 8($sp)		#Original Box Request Number
 jal PlayCirSound	#Play the sound after circle has appeared with number			
@@ -532,6 +536,10 @@ beq $a2, 2, colorBlue
 beq $a2, 3, colorGreen
 beq $a2, 4, colorRed
 beq $a2, 5, colorWhite
+beq $a2, 6, colorDodgerBlue
+beq $a2, 7, colorOrange
+beq $a2, 8, colorCrimson
+beq $a2, 9, colorSeaGreen
 
 colorBlack: lw $t0, 0($t1)			#Load the reqeusted color at specific memory address
 j returnColor
@@ -549,6 +557,18 @@ colorRed: lw $t0, 16($t1)
 j returnColor
 
 colorWhite: lw $t0, 20($t1)
+j returnColor
+
+colorDodgerBlue: lw $t0, 24($t1)
+j returnColor
+
+colorOrange: lw $t0, 28($t1)
+j returnColor
+
+colorCrimson: lw $t0, 32($t1)
+j returnColor
+
+colorSeaGreen: lw $t0, 36($t1)
 j returnColor
 
 returnColor:
