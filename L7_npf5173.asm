@@ -323,13 +323,14 @@ sw $ra, 12($sp)	        #Store ra
 sw $a0, 8($sp)	        #Store Box Number requested
 sw $a1, 4($sp)		#Store Blink time
 
-la $t0, CircleTable	#Load address of array on stack	
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2, 8($t0)          #Load word for pixel color
+#la $t0, CircleTable	#Load address of array on stack	
+#lw $a0, 0($t0)		#Load word for x variable of horiz divider
+#lw $a1, 4($t0)          #Load word for y variable of horiz divider
+#lw $a2, 8($t0)          #Load word for pixel color
 #add $a3, $0, 32		#Length of line
 
 lw $t1, 8($sp)		#Request Simon box number, original a0
+sub $t1, $t1, 1		#Correct offset for index into CircleTable
 mul $t1, $t1, 20	#Requested box number address offset
 la $t0, CircleTable	#Load address of array of boxes
 add $t0, $t0, $t1	#Address of Requested Box
