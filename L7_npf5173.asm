@@ -119,13 +119,17 @@ add $s3, $s3, 1		   #Loop counter
 jal GetRandNum		   #Reqests next random number to
 
 add $a0, $0, $v0	   #Pass return from GetRandNumb to AddNumbToSimonStack 
-#li $a0, 4
 jal AddNumbToSimonStack    #Calls fucntion to add random number onto Simon stack
 
 jal BlinkLights		   #Blinks the simon square(s)
 
 jal ReadMemoryMatch	   #Read uses pattern, return outcome
+
 beqz $v1, Lost		   #Return states user mismatched, inform and end came
+
+#####Make incorrect sound
+#####Display Correct circle with sound and blink rapidly
+
 blt $s3, $s6, loopAgain
 
 la $a0, Winner    	# load address of prompt string, user won
@@ -184,9 +188,14 @@ skillSlected:
 jr $ra
 
 ######### Fuction that Reads User Memory Match ############
+### $v0 last read number from Simon Array
 ### $v1 1 if matches sequence, 0 if failed
 ###########################################################
 ReadMemoryMatch:
+addiu $sp, $sp, -12     #Allocate space on stack to save ra
+sw $ra, 8($sp)	        #Store ra
+
+
 add $t0, $0, $s0	#Total number of numbers on Simon stack
 la $t1, Simon_Array
 
@@ -208,7 +217,33 @@ sub $t3, $t3, 0x30      #Adjust hex ascii value to decimal
 add $t0, $t0, -4	#Decrement remaining simon stack words
 beq $t3, $t2, matchLoop	#Continue if user matches number
 
+			##Below is code when you failed
+add $a0, $0, $t2	#Blink Correct Answer
+add $a1, $0, $a0	
+sw $a0, 4($sp)		#Save circle number
+
+li $a0, 5		# 5 = Wrong Circle Sound
+
+jal PlayCirSound	# Play incorrect cicle sound
+lw $a0, 4($sp)		#Restore circle number
+add $t0, $0 $t0		#Clear reg for blink loop counter
+
+blinkLoop:
+sw $a0, 4($sp)		#Save circle number
+li $a1, 0		#Load no pause, blink fast
+sw $t0, 0($sp)		#Save index in loop
+
+jal BlinkSimonCircle	#blink the correct circle
+
+lw $a0, 4($sp)		#Restore circle number
+lw $t0, 0($sp)		#Restore index
+add $t0, $t0, 1 	#Increment loop
+blt $t0, 3, blinkLoop	#Continue when under 3 iterations
+
 add $v1, $0, $0		#Return failed
+
+lw $ra, 8($sp)	        #Restore ra
+addiu $sp, $sp, 12      #Move back up the stack
 
 exitMatch:
 jr $ra
@@ -323,12 +358,6 @@ sw $ra, 12($sp)	        #Store ra
 sw $a0, 8($sp)	        #Store Box Number requested
 sw $a1, 4($sp)		#Store Blink time
 
-#la $t0, CircleTable	#Load address of array on stack	
-#lw $a0, 0($t0)		#Load word for x variable of horiz divider
-#lw $a1, 4($t0)          #Load word for y variable of horiz divider
-#lw $a2, 8($t0)          #Load word for pixel color
-#add $a3, $0, 32		#Length of line
-
 lw $t1, 8($sp)		#Request Simon box number, original a0
 sub $t1, $t1, 1		#Correct offset for index into CircleTable
 mul $t1, $t1, 20	#Requested box number address offset
@@ -339,18 +368,16 @@ sw $t0, 0($sp)		#Store Address of CircleTable + Offset
 lw $a0, 0($t0)		#Load word for x variable of horiz divider
 lw $a1, 4($t0)          #Load word for y variable of horiz divider
 lw $a2, 8($t0)          #Load word for requested box color
-#add $a3, $0, 8		#Length of line
 
 jal DrawCircle
 lw $ra, 12($sp)	       #Restore ra
-lw $t0, 0($sp)			#Restore circle table index address
+lw $t0, 0($sp)	       #Restore circle table index address
 
 lw $a0, 12($t0)		#horizontal pixel co-ordinate number in circle
 lw $a1, 16($t0)		#vertical pixel co-ordinate
 lw $a3, 8($t0)		#pixel color number for circle
 
 lw $t2, 8($sp)		#Original Box Request Number
-#add $t2, $t2, 1		#Origanl plus offset
 
 beq $t2, 1, num1	#Switch Case for number to enter into simon circle
 beq $t2, 2, num2	
@@ -384,7 +411,6 @@ lw $t0, 0($sp)		#Rstore Address of BoxTable + Offset
 lw $a0, 0($t0)		#Load word for x variable of horiz divider
 lw $a1, 4($t0)          #Load word for y variable of horiz divider
 lw $a2 ColorTable           #Load word for BLACK box color, erases the box
-#add $a3, $0, 8		#Length of line
 
 jal DrawCircle
 
@@ -496,7 +522,7 @@ addi $sp, $sp, 12	#move stack pointer back up
 jr $ra
 
 ############ Play Circle Sound ########################
-# a0 Circle Number 
+# a0 Circle Number (1-4), 5 = Wrong Circle Sound
 #####################################################
 PlayCirSound:
 li $v0, 31		#Syscall for MIDI out
@@ -508,6 +534,7 @@ beq $a0, 1, sound1	#Switch Case for number to enter into simon circle
 beq $a0, 2, sound2	
 beq $a0, 3, sound3
 beq $a0, 4, sound4
+beq $a0, 5, wrongCicleSound
 
 sound1:
 add $a0, $0, 67		#Pitch (61-72) 67 is G
@@ -520,6 +547,11 @@ add $a0, $0, 66		#Pitch (61-72) 66 is F# or Gb
 j playSound
 sound4:
 add $a0, $0, 71		#Pitch (61-72) 66 is B or Cb
+j playSound
+wrongCicleSound:
+add $a2, $0, 16		#Insturment (Organ)
+add $a0, $0, 65		#Pitch (61-72) 65 E# or F
+
 
 playSound:
 syscall
