@@ -192,60 +192,72 @@ jr $ra
 ### $v1 1 if matches sequence, 0 if failed
 ###########################################################
 ReadMemoryMatch:
-addiu $sp, $sp, -12     #Allocate space on stack to save ra
-sw $ra, 8($sp)	        #Store ra
-
+addiu $sp, $sp, -20      #Allocate space on stack to save ra
+sw $ra, 16($sp)	        #Store ra
 
 add $t0, $0, $s0	#Total number of numbers on Simon stack
 la $t1, Simon_Array
 
 matchLoop:
 add $v1, $0, 1		#Set return for Succesful match
-beqz $t0, exitMatch	#When no values on Simon stack left to check, return success
+beqz $t0, doneMatching	#When no values on Simon stack left to check, return success
 lw $t2, 0($t1) 		#Load current value on Simon stack
 addiu $t1, $t1, -4	#Move to next value address on Simon stack
 
+
+readCharAgain:
 li $v0, 12              #specify read char
 syscall
-add $t3, $0, $v0	#Moves ReadMemoryMatch return to temp reg
+add $t3, $0, $v0	#Moves ReadMemoryMatch return to temp re
 
 li $a0, 10              #load char value into arg for new line
 li $v0, 11	        #cmd to print char,
 syscall
 
 sub $t3, $t3, 0x30      #Adjust hex ascii value to decimal
+add $a0, $0, $t3	#Copy number pressed to sound arg
+
+jal PlayCirSound	#Play a sound
+
+sw $t0, 12($sp)		#Store numbers left to go on stack
+sw $t1, 8($sp)		#Store address for next value
+sw $t2, 4($sp)		#Current Simon stack value
+sw $t3, 0($sp)		#Current End User value
+	
+add $a0, $0, $t3	#Load Arg for number
+li $a1, 0		#No Pause
+jal BlinkSimonCircle	#Blink Circle
+
+
+lw $t0, 12($sp)		#Store numbers left to go on stack
+lw $t1, 8($sp)		#Store address for next value
+lw $t2, 4($sp)		#Current Simon stack value
+lw $t3, 0($sp)		#Current End User value
+
+
 add $t0, $t0, -4	#Decrement remaining simon stack words
 beq $t3, $t2, matchLoop	#Continue if user matches number
 
-			##Below is code when you failed
-add $a0, $0, $t2	#Blink Correct Answer
-add $a1, $0, $a0	
-sw $a0, 4($sp)		#Save circle number
+li $a0, 5		#Load Wrong circle sound
+jal PlayCirSound	#Play a sound
 
-li $a0, 5		# 5 = Wrong Circle Sound
+add $t0, $0, 3		#Counter for 3 blinks
+blinkCorrect:
+lw $a0, 4($sp)		#Load correct value to blink
+li $a1, 0		#No pause
 
-jal PlayCirSound	# Play incorrect cicle sound
-lw $a0, 4($sp)		#Restore circle number
-add $t0, $0 $t0		#Clear reg for blink loop counter
+sw $t0, 12($sp)		#save loop counter
 
-blinkLoop:
-sw $a0, 4($sp)		#Save circle number
-li $a1, 0		#Load no pause, blink fast
-sw $t0, 0($sp)		#Save index in loop
+jal BlinkSimonCircle	#Blink
 
-jal BlinkSimonCircle	#blink the correct circle
+lw $t0, 12($sp)		      #save loop counter
+add $t0, $t0, -1	      #Decremnt counter
+bne $t0, $0, blinkCorrect
 
-lw $a0, 4($sp)		#Restore circle number
-lw $t0, 0($sp)		#Restore index
-add $t0, $t0, 1 	#Increment loop
-blt $t0, 3, blinkLoop	#Continue when under 3 iterations
+doneMatching:
+lw $ra, 16($sp)
+addiu $sp, $sp, 20
 
-add $v1, $0, $0		#Return failed
-
-lw $ra, 8($sp)	        #Restore ra
-addiu $sp, $sp, 12      #Move back up the stack
-
-exitMatch:
 jr $ra
 
 ######## Function to initalize the program, seeds random value ##########
@@ -329,6 +341,8 @@ sw $t1, 8($sp)
 sw $t2, 4($sp)
 sw $t3, 0($sp)
 
+jal PlayCirSound
+lw $a0, 0($t3)		#Restore circle number argument
 la $t4, BlinkTimes	#Load address to check blink speed
 lw $a1, 0($t4)		#Blink Speed Beginner
 beq $s6, 5, blinkNext	#Blink when level 0
@@ -336,7 +350,8 @@ lw $a1, 4($t4)		#Blink Speed Intermediate
 beq $s6, 8, blinkNext	#Blink when level 1
 lw $a1, 8($t4)		#Blink Speed Expert
 
-blinkNext:jal BlinkSimonCircle
+blinkNext:
+jal BlinkSimonCircle
 lw $ra, 20($sp)	        #Restore ra and temp registers
 lw $t2, 16($sp)		
 lw $t1, 8($sp)
@@ -396,12 +411,7 @@ sw $t0, 0($sp)			#Store circle table index address
 
 outTextCall: jal OutText	#draw number in circle
 lw $ra, 12($sp)	       #Restore ra
-lw $t0, 0($sp)			#Restore circle table index address
-
-lw $a0, 8($sp)		#Original Box Request Number
-jal PlayCirSound	#Play the sound after circle has appeared with number			
-
-lw $ra, 12($sp)	       #Restore ra
+lw $t0, 0($sp)			#Restore circle table index address	
 
 lw $a0, 4($sp)	       #Load arguement for pause time before "Blink time"
 jal Pause				#Call Pause
@@ -522,7 +532,7 @@ addi $sp, $sp, 12	#move stack pointer back up
 jr $ra
 
 ############ Play Circle Sound ########################
-# a0 Circle Number (1-4), 5 = Wrong Circle Sound
+# a0 Circle Number (1-4) sounds, wrong number sound otherwise
 #####################################################
 PlayCirSound:
 li $v0, 31		#Syscall for MIDI out
@@ -534,7 +544,7 @@ beq $a0, 1, sound1	#Switch Case for number to enter into simon circle
 beq $a0, 2, sound2	
 beq $a0, 3, sound3
 beq $a0, 4, sound4
-beq $a0, 5, wrongCicleSound
+j wrongCicleSound	#Go to wrong number sound if not 1-4
 
 sound1:
 add $a0, $0, 67		#Pitch (61-72) 67 is G
@@ -551,7 +561,6 @@ j playSound
 wrongCicleSound:
 add $a2, $0, 16		#Insturment (Organ)
 add $a0, $0, 65		#Pitch (61-72) 65 E# or F
-
 
 playSound:
 syscall
